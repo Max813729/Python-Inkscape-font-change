@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="作業ファイル.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.5233586"
+     inkscape:cx="274.3937"
+     inkscape:cy="324.61169"
+     inkscape:window-width="1920"
+     inkscape:window-height="1111"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;fill:#f6ffd5;stroke-width:0.264583"
+       x="34.389473"
+       y="18.410528"
+       id="text1"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="stroke-width:0.264583"
+         x="34.389473"
+         y="18.410528">テスト</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="34.389473"
+         y="22.379278"
+         id="tspan2" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;fill:#f6ffd5;stroke-width:0.264583"
+       x="32.826313"
+       y="25.357895"
+       id="text3"><tspan
+         sodipodi:role="line"
+         id="tspan3"
+         style="stroke-width:0.264583"
+         x="32.826313"
+         y="25.357895">漢字テストあ</tspan><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.264583"
+         x="32.826313"
+         y="29.326645"
+         id="tspan4" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;fill:#f6ffd5;stroke-width:0.264583"
+       x="31.436842"
+       y="33.86842"
+       id="text5"><tspan
+         sodipodi:role="line"
+         id="tspan5"
+         style="stroke-width:0.264583"
+         x="31.436842"
+         y="33.86842">あいうテスト</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;fill:#f6ffd5;stroke-width:0.264583"
+       x="32.131577"
+       y="43.942108"
+       id="text6"><tspan
+         sodipodi:role="line"
+         id="tspan6"
+         style="stroke-width:0.264583"
+         x="32.131577"
+         y="43.942108">漢字あいうテスト</tspan></text>
+  </g>
+</svg>

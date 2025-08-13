@@ -3,8 +3,8 @@ import re
 import statistics
 
 # File paths
-file_ref = "2-参照用ファイル.svg"      # Source with paths
-file_template = "1-作業ファイル.svg"  # Template with desired style
+file_ref = "test-1.svg"      # Source with paths
+file_template = "example.svg"  # Template with desired style
 file_output = "converted_fixed_size.svg"
 
 # Load SVGs
