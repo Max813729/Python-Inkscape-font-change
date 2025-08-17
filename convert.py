@@ -3,7 +3,7 @@ import re
 import statistics
 
 # File paths
-file_ref = "test-1.svg"      # Source with paths
+file_ref = "test-1.svg"        # Source with paths
 file_template = "example.svg"  # Template with desired style
 file_output = "converted_fixed_size.svg"
 
@@ -46,18 +46,10 @@ sample_style = sample_text_tag.get(
 ) if sample_text_tag else "font-size:3.175px;fill:#000000;stroke:none"
 template_font_px = get_font_size_px(sample_style)
 
-# Template line spacing (median Δy)
-template_y_vals = sorted({
-    float(t.get("y", "0")) for t in soup_template.find_all("text") if t.get("y")
-})
-template_line_dy = statistics.median(
-    [abs(b - a) for a, b in zip(template_y_vals, template_y_vals[1:])]
-) if len(template_y_vals) >= 2 else None
-
-# --- Extract characters from reference ---
+# --- Extract characters from reference in document order ---
 paths = soup_ref.find_all("path", attrs={"inkscape:label": True})
 char_data = []
-for p in paths:
+for p in paths:  # preserves document order
     char = p["inkscape:label"]
     xy = parse_translate_xy(p.get("transform", ""))
     if xy is None:
@@ -65,39 +57,30 @@ for p in paths:
     x, y = xy
     char_data.append({"char": char, "x": x, "y": y})
 
-# Group into rows by Y (tolerance)
-row_tolerance = 2.0
-rows = {}
-for item in char_data:
-    y = item["y"]
-    row_key = None
-    for key in rows.keys():
-        if abs(key - y) <= row_tolerance:
-            row_key = key
-            break
-    if row_key is None:
-        row_key = y
-        rows[row_key] = []
-    rows[row_key].append(item)
+# If no characters found, stop
+if not char_data:
+    raise RuntimeError("No characters found in reference file.")
 
-sorted_rows = sorted(rows.items(), key=lambda r: r[0])
-for y, chars in sorted_rows:
-    chars.sort(key=lambda c: c["x"])
+# --- Compute reference line Y (all characters are on one line) ---
+ref_y_vals = [c["y"] for c in char_data]
+avg_y = statistics.mean(ref_y_vals)
 
-# Reference line spacing (median Δy)
-ref_row_keys = [rk for rk, _ in sorted_rows]
-ref_line_dy = statistics.median(
-    [abs(b - a) for a, b in zip(ref_row_keys, ref_row_keys[1:])]
-) if len(ref_row_keys) >= 2 else None
+# --- Extract fill color from reference ---
+ref_fill = None
+for p in paths:
+    style = p.get("style", "")
+    m = re.search(r"fill\s*:\s*(#[0-9a-fA-F]{3,6})", style)
+    if m:
+        ref_fill = m.group(1)
+        break
+if not ref_fill:
+    ref_fill = "#000000"  # fallback default
 
-# --- Determine scaling factor ---
-scale = 1.0
-if template_line_dy and ref_line_dy and template_line_dy > 0:
-    scale = ref_line_dy / template_line_dy
-
-# Apply scale to font size
-new_font_px = template_font_px * scale
+# --- Font size scaling ---
+# Since all characters are on one line, just keep template font size
+new_font_px = template_font_px
 new_style = update_css_prop(sample_style, "font-size", f"{new_font_px:.6f}px")
+new_style = update_css_prop(new_style, "fill", ref_fill)
 
 # --- Build new SVG using template root ---
 svg_root_template = soup_template.find("svg")
@@ -110,13 +93,17 @@ defs_tag = soup_template.find("defs")
 if defs_tag:
     svg_tag.append(BeautifulSoup(str(defs_tag), "xml"))
 
-# Add text rows
-for y, chars in sorted_rows:
-    text_tag = new_svg.new_tag("text", x="0", y=str(-y), style=new_style)
-    tspan_tag = new_svg.new_tag("tspan", x="0", y=str(-y))
-    tspan_tag.string = "".join(c["char"] for c in chars)
-    text_tag.append(tspan_tag)
-    svg_tag.append(text_tag)
+# --- Normalize Y to fit inside template viewBox ---
+baseline_template_y = float(sample_text_tag.get("y", "0")) if sample_text_tag else 0.0
+y_offset = baseline_template_y - avg_y
+new_y = avg_y + y_offset
+
+# --- Add a single text element with all characters ---
+text_tag = new_svg.new_tag("text", x="0", y=str(new_y), style=new_style)
+tspan_tag = new_svg.new_tag("tspan", x="0", y=str(new_y))
+tspan_tag.string = "".join(c["char"] for c in char_data)  # preserve doc order
+text_tag.append(tspan_tag)
+svg_tag.append(text_tag)
 
 # Save
 with open(file_output, "w", encoding="utf-8") as f:
