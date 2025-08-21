@@ -1,145 +1,39 @@
-from bs4 import BeautifulSoup
-import re
-import statistics
+import xml.etree.ElementTree as ET
 
-# File paths
-file_ref = "test-1.svg"      # Source with paths
-file_template = "example.svg"  # Template with desired style
-file_output = "converted_preserve_lines.svg"
+# Input files
+font_file = "フォント.svg"
+work_file = "作業ファイル.svg"
+output_file = "converted.svg"
 
-# Load SVGs
-with open(file_ref, "r", encoding="utf-8") as f:
-    soup_ref = BeautifulSoup(f, "xml")
-with open(file_template, "r", encoding="utf-8") as f:
-    soup_template = BeautifulSoup(f, "xml")
+# Parse both SVG files
+font_tree = ET.parse(font_file)
+font_root = font_tree.getroot()
 
-# --- Helper functions ---
-def parse_translate_xy(transform_text: str):
-    """Extract x,y from translate(x,y)"""
-    if not transform_text:
-        return None
-    m = re.search(r"translate\(\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*\)", transform_text)
-    if not m:
-        return None
-    return float(m.group(1)), float(m.group(2))
+work_tree = ET.parse(work_file)
+work_root = work_tree.getroot()
 
-def update_css_prop(style_str: str, prop: str, new_value: str):
-    """Update or add a CSS property inside a style string"""
-    parts = [p.strip() for p in style_str.split(";") if p.strip()]
-    for i, p in enumerate(parts):
-        if p.lower().startswith(prop.lower() + ":"):
-            parts[i] = f"{prop}:{new_value}"
-            break
-    else:
-        parts.append(f"{prop}:{new_value}")
-    return ";".join(parts)
+# SVG namespace fix
+ns = {"svg": "http://www.w3.org/2000/svg"}
+ET.register_namespace("", "http://www.w3.org/2000/svg")
 
-def get_font_size_px(style_str: str, default_px: float = 3.175):
-    """Extract font-size in px from style string"""
-    m = re.search(r"font-size\s*:\s*([\d.]+)\s*px", style_str, flags=re.I)
-    return float(m.group(1)) if m else default_px
+# ---- Step 1: Extract style from 作業ファイル.svg ----
+# We assume 作業ファイル has at least one <text> element with the desired style
+work_text = work_root.find(".//svg:text", ns)
+work_style = work_text.attrib.get("style", "")
+work_attrib = {k: v for k, v in work_text.attrib.items() if k != "x" and k != "y"}
 
-# --- Extract style from template ---
-sample_text_tag = soup_template.find("text")
-sample_style = sample_text_tag.get(
-    "style", "font-size:3.175px;fill:#000000;stroke:none"
-) if sample_text_tag else "font-size:3.175px;fill:#000000;stroke:none"
-template_font_px = get_font_size_px(sample_style)
+print("Reference style:", work_style)
 
-# Template line spacing (median Δy)
-template_y_vals = sorted({
-    float(t.get("y", "0")) for t in soup_template.find_all("text") if t.get("y")
-})
-template_line_dy = statistics.median(
-    [abs(b - a) for a, b in zip(template_y_vals, template_y_vals[1:])]
-) if len(template_y_vals) >= 2 else None
+# ---- Step 2: Apply this style to all text in フォント.svg ----
+for text_elem in font_root.findall(".//svg:text", ns):
+    # Overwrite style
+    if work_style:
+        text_elem.set("style", work_style)
+    # Copy other attributes from reference text
+    for k, v in work_attrib.items():
+        if k not in ("x", "y", "style"):  # keep positions intact
+            text_elem.set(k, v)
 
-# --- Extract characters from reference ---
-paths = soup_ref.find_all("path", attrs={"inkscape:label": True})
-char_data = []
-for p in paths:
-    char = p["inkscape:label"]
-    xy = parse_translate_xy(p.get("transform", ""))
-    if xy is None:
-        continue
-    x, y = xy
-    char_data.append({"char": char, "x": x, "y": y, "style": p.get("style", "")})
-
-# --- Extract fill color from reference (global) ---
-ref_fill = None
-for p in paths:
-    style = p.get("style", "")
-    m = re.search(r"fill\s*:\s*(#[0-9a-fA-F]{3,6})", style)
-    if m:
-        ref_fill = m.group(1)
-        break
-if not ref_fill:
-    ref_fill = "#000000"  # fallback default
-
-# --- Group into rows by Y (tolerance for multiple lines) ---
-row_tolerance = 2.0
-rows = {}
-for item in char_data:
-    y = item["y"]
-    row_key = None
-    for key in rows.keys():
-        if abs(key - y) <= row_tolerance:
-            row_key = key
-            break
-    if row_key is None:
-        row_key = y
-        rows[row_key] = []
-    rows[row_key].append(item)
-
-# Sort rows by Y (top → bottom), and characters by X (left → right)
-sorted_rows = sorted(rows.items(), key=lambda r: r[0])
-for y, chars in sorted_rows:
-    chars.sort(key=lambda c: c["x"])
-
-# Reference line spacing (median Δy)
-ref_row_keys = [rk for rk, _ in sorted_rows]
-ref_line_dy = statistics.median(
-    [abs(b - a) for a, b in zip(ref_row_keys, ref_row_keys[1:])]
-) if len(ref_row_keys) >= 2 else None
-
-# --- Determine scaling factor ---
-scale = 1.0
-# if template_line_dy and ref_line_dy and template_line_dy > 0:
-#     scale = ref_line_dy / template_line_dy
-
-# Apply scale to font size and update style with ref fill
-new_font_px = template_font_px * scale
-new_style = update_css_prop(sample_style, "font-size", f"{new_font_px:.6f}px")
-new_style = update_css_prop(new_style, "fill", ref_fill)
-
-# --- Normalize Y positions ---
-ref_y_vals = [y for y, _ in sorted_rows]
-min_y = min(ref_y_vals)
-baseline_template_y = float(sample_text_tag.get("y", "0")) if sample_text_tag else 0.0
-y_offset = baseline_template_y - min_y
-
-# --- Build new SVG using template root ---
-svg_root_template = soup_template.find("svg")
-new_svg = BeautifulSoup(features="xml")
-svg_tag = new_svg.new_tag("svg", **svg_root_template.attrs)
-new_svg.append(svg_tag)
-
-# Copy <defs> from template
-defs_tag = soup_template.find("defs")
-if defs_tag:
-    svg_tag.append(BeautifulSoup(str(defs_tag), "xml"))
-
-# Add text rows (preserve multiple lines if they exist)
-for y, chars in sorted_rows:
-    new_y = y + y_offset
-    text_tag = new_svg.new_tag("text", x="0", y=str(new_y), style=new_style)
-    tspan_tag = new_svg.new_tag("tspan", x="0", y=str(new_y))
-    tspan_tag.string = "".join(c["char"] for c in chars)
-    text_tag.append(tspan_tag)
-    svg_tag.append(text_tag)
-
-# Save
-with open(file_output, "w", encoding="utf-8") as f:
-    f.write(new_svg.prettify())
-
-print(f"✅ Saved converted file: {file_output}")
+# ---- Step 3: Save as new SVG ----
+font_tree.write(output_file, encoding="utf-8", xml_declaration=True)
+print("Converted file saved as", output_file)
