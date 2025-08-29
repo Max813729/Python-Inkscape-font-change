@@ -1,2 +1,5 @@
 Python Inkscape
-font convertor
+
+自作のファイルを Inkscape の拡張機能「Hershey Text」として認識させ、入力した文字をストロークフォントに変換できるようにしたいと考えています。
+しかし、現在の自作ファイルは Hershey Text では利用できません。
+そのため、Hershey Text で使用可能なファイルを作成していただけますか。
